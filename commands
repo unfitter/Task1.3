@@ -1,0 +1,51 @@
+1)cd usr/sbin
+  vim uptime.sh
+  chmod 771 uptime.sh
+  cd /etc/systemd/system/
+  vim uptime.service
+  cd home/oleg
+  vim uptimeotput.txt
+  stress --cpu 2 --timeout 50s
+  vim cleanup
+  cron -e
+  Cron: 
+    10 * * * * root systemctl status uptime.service
+    
+  ping google.com
+  Ctr+Z
+  bg
+  jobs -l
+  fg
+  Ctr+Z
+  kill %1
+  
+  Code listing:
+  1)uptime.service:
+    [Unit]
+    Description=Uptime systemd service
+
+    [Service]
+    Type=simple
+    ExecStart=/bin/bash /usr/sbin/uptime.sh
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+    
+ 2)uptime.sh
+    #!/bin/bash
+    while true
+    do
+        load=$(uptime | awk '{print substr($(NF-2), 1, length($NF-2)-1)}' | tr ',' '.' | bc -l)
+        if (( $(echo "$load > 1" | bc -l) )); then
+            uptime >> /home/oleg/overload.txt
+        else
+            uptime >> /home/oleg/uptimeoutput.txt
+        fi
+        size=$(du -h /home/oleg/overload.txt | awk '{print substr($1, 1, length($1)-1)}' | tr ',' '.' | bc -l)
+        if (( $(echo "$size > 50" | bc -l) )); then
+            cat /dev/null > /home/oleg/overload.txt
+            date | awk 'BEGIN{print "Cleanup is successfull! Time: "} {print $5}' >> cleanup 
+        fi
+        sleep 15
+    done
